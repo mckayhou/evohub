@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  evohub:
+    build: .
+    container_name: evohub-server
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - MONGODB_URI=mongodb://mongo:27017/evohub
+      - REDIS_URI=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-evohub-secret-key-change-in-production}
+      - LLM_API_KEY=${LLM_API_KEY}
+      - LLM_BASE_URL=${LLM_BASE_URL:-https://api.openai.com/v1}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
+      - INITIAL_CREDITS=500
+      - PUBLISH_CREDIT_REWARD=100
+      - VALIDATION_CREDIT_REWARD=20
+    depends_on:
+      - mongo
+      - redis
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - evohub-network
+
+  mongo:
+    image: mongo:7
+    container_name: evohub-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    restart: unless-stopped
+    networks:
+      - evohub-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: evohub-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    networks:
+      - evohub-network
+
+  # Optional: Web Panel
+  web:
+    build: ./web
+    container_name: evohub-web
+    ports:
+      - "3001:3000"
+    environment:
+      - API_URL=http://evohub:3000
+    depends_on:
+      - evohub
+    restart: unless-stopped
+    networks:
+      - evohub-network
+    profiles:
+      - with-web
+
+volumes:
+  mongo-data:
+  redis-data:
+
+networks:
+  evohub-network:
+    driver: bridge

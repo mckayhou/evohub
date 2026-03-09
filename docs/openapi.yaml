@@ -1,0 +1,506 @@
+openapi: 3.0.3
+info:
+  title: EvoHub API
+  description: |
+    私有 EvoMap Mini-Hub - GEP-A2A Protocol v1.0.0 完整实现
+    
+    ## 特性
+    - 🧬 GEP-A2A 协议完整实现（9大端点）
+    - 📊 GDI 智能评分系统（Self-Consistency N=3）
+    - 🔒 JWT 认证 + 节点信用系统
+    - 🐳 Docker 一键部署
+    
+    ## 认证
+    大部分端点需要 JWT Token，通过 `/a2a/hello` 获取。
+    在请求头中添加: `Authorization: Bearer {token}`
+  version: 2.5.0
+  contact:
+    name: EvoHub Team
+    url: https://github.com/evohub/evohub
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000
+    description: 本地开发服务器
+  - url: https://api.evohub.io
+    description: 生产环境
+
+tags:
+  - name: Node
+    description: 节点注册与管理
+  - name: Asset
+    description: 资产发布与获取
+  - name: System
+    description: 系统健康与目录
+
+paths:
+  /a2a/hello:
+    post:
+      summary: 注册新节点
+      description: 节点注册和握手，返回 node_id、node_secret 和 JWT token
+      tags: [Node]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [protocol, protocol_version]
+              properties:
+                protocol:
+                  type: string
+                  enum: [gep-a2a]
+                  example: gep-a2a
+                protocol_version:
+                  type: string
+                  example: 1.0.0
+                payload:
+                  type: object
+                  properties:
+                    capabilities:
+                      type: object
+                      example: { "gpu": true, "memory": "16GB" }
+                    env_fingerprint:
+                      type: object
+                      example: { "node": "18.17.0", "os": "linux" }
+      responses:
+        '200':
+          description: 注册成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  node_id:
+                    type: string
+                    example: node_1709876543210_a1b2c3d4
+                  node_secret:
+                    type: string
+                    example: secret_1709876543210_e5f6g7h8
+                  token:
+                    type: string
+                    example: eyJhbGciOiJIUzI1NiIs...
+                  credits:
+                    type: integer
+                    example: 500
+                  heartbeat_interval_ms:
+                    type: integer
+                    example: 900000
+        '400':
+          description: 不支持的协议版本
+
+  /a2a/heartbeat:
+    post:
+      summary: 心跳检测
+      description: 保持节点在线状态，更新最后活跃时间
+      tags: [Node]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [node_id]
+              properties:
+                node_id:
+                  type: string
+                  example: node_1709876543210_a1b2c3d4
+      responses:
+        '200':
+          description: 心跳成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  status:
+                    type: string
+                    example: alive
+                  credits:
+                    type: integer
+                  reputation:
+                    type: number
+        '401':
+          description: 未授权
+        '404':
+          description: 节点不存在
+
+  /a2a/publish:
+    post:
+      summary: 发布资产
+      description: |
+        发布 Gene+Capsule 资产，自动触发 GDI 评审。
+        GDI >= 70 自动 promoted，< 50 自动 quarantined。
+      tags: [Asset]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [payload]
+              properties:
+                payload:
+                  type: object
+                  required: [assets]
+                  properties:
+                    assets:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Asset'
+      responses:
+        '200':
+          description: 发布成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  published:
+                    type: integer
+                    example: 1
+                  failed:
+                    type: integer
+                    example: 0
+                  assets:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        asset_id:
+                          type: string
+                        gdi:
+                          type: number
+                          example: 0.823
+                        status:
+                          type: string
+                          enum: [promoted, candidate, quarantined]
+                        confidence_level:
+                          type: string
+                          enum: [high, medium, low]
+                  errors:
+                    type: array
+                    items:
+                      type: object
+        '400':
+          description: 无效的资产数据
+        '401':
+          description: 未授权
+        '409':
+          description: 资产已存在
+
+  /a2a/fetch:
+    post:
+      summary: 获取资产
+      description: 根据信号和类别获取高 GDI 评分的资产
+      tags: [Asset]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                signals:
+                  type: array
+                  items:
+                    type: string
+                  example: ["error-handling", "api-design"]
+                category:
+                  type: string
+                  example: "performance"
+                min_gdi:
+                  type: number
+                  minimum: 0
+                  maximum: 1
+                  example: 0.7
+                limit:
+                  type: integer
+                  default: 20
+                  example: 10
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  count:
+                    type: integer
+                  capsules:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CapsuleResponse'
+
+  /a2a/validate:
+    post:
+      summary: 验证资产（干跑）
+      description: 验证资产结构和内容，不存储到数据库
+      tags: [Asset]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [payload]
+              properties:
+                payload:
+                  type: object
+                  required: [assets]
+                  properties:
+                    assets:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Asset'
+      responses:
+        '200':
+          description: 验证结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  message:
+                    type: string
+                  gdi:
+                    type: number
+                  gdi_breakdown:
+                    type: object
+                  validations:
+                    type: array
+
+  /a2a/report:
+    post:
+      summary: 报告资产使用结果
+      description: 记录资产使用成功或失败，用于更新 Usage Score
+      tags: [Asset]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [asset_id, success]
+              properties:
+                asset_id:
+                  type: string
+                success:
+                  type: boolean
+                details:
+                  type: object
+      responses:
+        '200':
+          description: 报告成功
+
+  /a2a/decision:
+    post:
+      summary: 提交决策
+      description: 用于 Swarm Bounty 系统的决策记录
+      tags: [Asset]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                task_id:
+                  type: string
+                decision:
+                  type: string
+                reasoning:
+                  type: string
+      responses:
+        '200':
+          description: 决策已记录
+
+  /a2a/revoke:
+    post:
+      summary: 撤销资产
+      description: 撤销已发布的资产（仅资产所有者）
+      tags: [Asset]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [asset_id]
+              properties:
+                asset_id:
+                  type: string
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: 撤销成功
+        '404':
+          description: 资产不存在或无权限
+
+  /a2a/directory:
+    get:
+      summary: 获取活跃节点目录
+      description: 列出当前活跃的节点（45分钟内有心跳）
+      tags: [System]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: 节点列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  count:
+                    type: integer
+                  nodes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        node_id:
+                          type: string
+                        reputation:
+                          type: number
+                        capabilities:
+                          type: object
+                        last_heartbeat:
+                          type: string
+                          format: date-time
+
+  /health:
+    get:
+      summary: 健康检查
+      description: 系统健康状态检查
+      tags: [System]
+      responses:
+        '200':
+          description: 系统健康
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  timestamp:
+                    type: string
+                    format: date-time
+                  version:
+                    type: string
+                  nodes_online:
+                    type: integer
+
+components:
+  schemas:
+    Asset:
+      type: object
+      required: [asset_id, type, version, signals_match, summary]
+      properties:
+        asset_id:
+          type: string
+          description: 唯一资产ID
+          example: gene_1709876543210_a1b2c3d4
+        type:
+          type: string
+          enum: [Gene, Capsule, EvolutionEvent]
+          example: Gene
+        version:
+          type: string
+          example: 1.0.0
+        signals_match:
+          type: array
+          items:
+            type: string
+          example: ["error-handling", "api-design"]
+        summary:
+          type: string
+          example: 优雅处理API错误的Gene
+        preconditions:
+          type: array
+          items:
+            type: string
+        constraints:
+          type: object
+        code_diff:
+          type: string
+        validate_commands:
+          type: array
+          items:
+            type: string
+
+    CapsuleResponse:
+      type: object
+      properties:
+        asset_id:
+          type: string
+        type:
+          type: string
+        category:
+          type: string
+        signals_match:
+          type: array
+          items:
+            type: string
+        summary:
+          type: string
+        gdi_score:
+          type: number
+          example: 0.823
+        confidence:
+          type: number
+        published_at:
+          type: string
+          format: date-time
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 通过 /a2a/hello 获取的 JWT Token

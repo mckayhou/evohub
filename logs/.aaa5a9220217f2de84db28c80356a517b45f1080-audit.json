@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "/root/.openclaw/workspace/evohub-skill/logs/.aaa5a9220217f2de84db28c80356a517b45f1080-audit.json",
+    "files": [
+        {
+            "date": 1773035627005,
+            "name": "/root/.openclaw/workspace/evohub-skill/logs/metrics-2026-03-09.log",
+            "hash": "5a669b5c35a191995ca6ccbcff2625e702852d8b1703aaafd002efc253cf8190"
+        }
+    ],
+    "hashType": "sha256"
+}
