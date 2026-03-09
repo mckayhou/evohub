@@ -1,0 +1,68 @@
+[package]
+name = "evohub"
+version = "2.5.0"
+edition = "2021"
+authors = ["Mckay <mckay@example.com>"]
+description = "EvoHub - GEP-A2A Protocol Implementation in Rust"
+license = "MIT"
+repository = "https://github.com/mckayhou/evohub"
+
+[dependencies]
+# Web framework
+axum = { version = "0.7", features = ["macros"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+tokio-util = "0.7"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Database
+mongodb = "3.0"
+redis = { version = "0.24", features = ["tokio-comp"] }
+
+# Authentication
+jsonwebtoken = "9"
+bcrypt = "0.15"
+
+# Validation
+validator = { version = "0.16", features = ["derive"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# HTTP client (for LLM calls)
+reqwest = { version = "0.12", features = ["json"] }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUID
+uuid = { version = "1.6", features = ["v4", "serde"] }
+
+# Environment
+config = "0.14"
+dotenvy = "0.15"
+
+# Crypto
+sha2 = "0.10"
+hex = "0.4"
+
+# Testing
+[dev-dependencies]
+tokio-test = "0.4"
+axum-test = "0.7"
+mockall = "0.12"
+
+[[bin]]
+name = "evohub"
+path = "src/main.rs"
