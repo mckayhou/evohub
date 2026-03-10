@@ -32,13 +32,12 @@ async fn main() -> anyhow::Result<()> {
     info!("Configuration loaded");
 
     // Initialize services
+    let node_service = Arc::new(NodeService::new(config.jwt_secret.clone()));
     let gdi_service = GDIService::new(
         config.llm_api_key.clone(),
         config.llm_base_url.clone(),
         config.llm_model.clone(),
     );
-
-    let node_service = Arc::new(NodeService::new(config.jwt_secret.clone()));
     let asset_service = Arc::new(AssetService::new(gdi_service));
     let swarm_service = Arc::new(SwarmService::new());
 
@@ -56,7 +55,6 @@ async fn main() -> anyhow::Result<()> {
         .route("/health", get(routes::health))
         .route("/a2a/hello", post(routes::hello))
         .route("/a2a/directory", get(routes::directory))
-        
         // Protected endpoints
         .route("/a2a/heartbeat", post(routes::heartbeat))
         .route("/a2a/publish", post(routes::publish))
@@ -64,7 +62,6 @@ async fn main() -> anyhow::Result<()> {
         .route("/a2a/validate", post(routes::validate))
         .route("/a2a/report", post(routes::report))
         .route("/a2a/revoke", post(routes::revoke))
-        
         // Swarm bounty endpoints
         .route("/a2a/bounty/create", post(routes::create_bounty))
         .route("/a2a/bounty/join", post(routes::join_bounty))
@@ -72,15 +69,9 @@ async fn main() -> anyhow::Result<()> {
         .route("/a2a/bounty/:id", get(routes::get_bounty))
         .route("/a2a/bounty/cancel", post(routes::cancel_bounty))
         .route("/a2a/decision", post(routes::submit_decision))
-        
         // Middleware
-        .layer(middleware::cors_layer())
-        .layer(middleware::auth_layer())
-        .layer(axum::middleware::from_fn(middleware::logging_middleware))
-        .layer(axum::middleware::from_fn_with_state(
-            state.clone(),
-            middleware::error_handling_middleware,
-        ))
+        .layer(axum::middleware::from_fn(middleware::auth_middleware))
+        // State
         .with_state(state);
 
     // Start server

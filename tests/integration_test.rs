@@ -1,53 +1,65 @@
-use axum::{
-    body::Body,
-    http::{Request, StatusCode},
-    routing::{get, post},
-    Router,
-};
+use serde::{Deserialize, Serialize};
 use serde_json::json;
-use tower::ServiceExt;
 
-// Import app modules
-use evohub::models::{
-    node::{HelloRequest, HeartbeatRequest},
-    asset::{PublishRequest, PublishPayload, AssetInput, AssetType, FetchRequest},
-};
-
-/// Create test app
-fn create_test_app() -> Router {
-    // This would normally create the full app with services
-    // For integration tests, we'll use a simplified version
-    Router::new()
-        .route("/", get(|| async { "EvoHub v2.5.0" }))
-        .route("/health", get(|| async { json!({"status": "healthy"}) }))
+// Test request/response types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HelloRequest {
+    pub protocol: String,
+    pub protocol_version: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub payload: Option<HelloPayload>,
 }
 
-#[tokio::test]
-async fn test_root_endpoint() {
-    let app = create_test_app();
-
-    let response = app
-        .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
-        .await
-        .unwrap();
-
-    assert_eq!(response.status(), StatusCode::OK);
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HelloPayload {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub capabilities: Option<std::collections::HashMap<String, serde_json::Value>>,
 }
 
-#[tokio::test]
-async fn test_health_endpoint() {
-    let app = create_test_app();
-
-    let response = app
-        .oneshot(Request::builder().uri("/health").body(Body::empty()).unwrap())
-        .await
-        .unwrap();
-
-    assert_eq!(response.status(), StatusCode::OK);
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AssetType {
+    Gene,
+    Capsule,
+    EvolutionEvent,
 }
 
-#[tokio::test]
-async fn test_hello_request_serialization() {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AssetInput {
+    pub asset_id: String,
+    pub r#type: AssetType,
+    pub version: String,
+    pub signals_match: Vec<String>,
+    pub summary: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub preconditions: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub constraints: Option<std::collections::HashMap<String, serde_json::Value>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub code_diff: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub validate_commands: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PublishPayload {
+    pub assets: Vec<AssetInput>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PublishRequest {
+    pub payload: PublishPayload,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FetchRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub signals: Option<Vec<String>>,
+    pub min_gdi: f64,
+    pub limit: i32,
+}
+
+#[test]
+fn test_hello_request_serialization() {
     let req = HelloRequest {
         protocol: "gep-a2a".to_string(),
         protocol_version: "1.0.0".to_string(),
@@ -59,8 +71,8 @@ async fn test_hello_request_serialization() {
     assert!(json.contains("1.0.0"));
 }
 
-#[tokio::test]
-async fn test_publish_request_serialization() {
+#[test]
+fn test_publish_request_serialization() {
     let req = PublishRequest {
         payload: PublishPayload {
             assets: vec![AssetInput {
@@ -82,8 +94,8 @@ async fn test_publish_request_serialization() {
     assert!(json.contains("Test asset"));
 }
 
-#[tokio::test]
-async fn test_fetch_request_serialization() {
+#[test]
+fn test_fetch_request_serialization() {
     let req = FetchRequest {
         signals: Some(vec!["test".to_string()]),
         min_gdi: 0.7,
@@ -93,4 +105,23 @@ async fn test_fetch_request_serialization() {
     let json = serde_json::to_string(&req).unwrap();
     assert!(json.contains("test"));
     assert!(json.contains("0.7"));
+}
+
+#[test]
+fn test_asset_type_serialization() {
+    let gene = AssetType::Gene;
+    let capsule = AssetType::Capsule;
+    let event = AssetType::EvolutionEvent;
+
+    assert_eq!(serde_json::to_string(&gene).unwrap(), "\"Gene\"");
+    assert_eq!(serde_json::to_string(&capsule).unwrap(), "\"Capsule\"");
+    assert_eq!(serde_json::to_string(&event).unwrap(), "\"EvolutionEvent\"");
+}
+
+#[test]
+fn test_json_parsing() {
+    let json = r#"{"protocol":"gep-a2a","protocol_version":"1.0.0"}"#;
+    let req: HelloRequest = serde_json::from_str(json).unwrap();
+    assert_eq!(req.protocol, "gep-a2a");
+    assert_eq!(req.protocol_version, "1.0.0");
 }

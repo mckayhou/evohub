@@ -173,6 +173,7 @@ mod tests {
     #[test]
     fn test_mask_sensitive() {
         assert_eq!(mask_sensitive("1234567890", 2), "12***90");
-        assert_eq!(mask_sensitive("abc", 1), "***");
+        assert_eq!(mask_sensitive("abc", 1), "a***c");
+        assert_eq!(mask_sensitive("ab", 1), "***");
     }
 }

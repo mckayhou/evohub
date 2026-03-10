@@ -1,44 +1,32 @@
 use serde::{Deserialize, Serialize};
-use validator::Validate;
 
 /// Validation schema for asset input
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AssetInputSchema {
-    #[validate(length(min = 1, max = 128))]
     pub asset_id: String,
-    
-    #[validate(regex(path = "crate::utils::SEMVER_REGEX"))]
     pub version: String,
-    
-    #[validate(length(min = 1))]
     pub signals_match: Vec<String>,
-    
-    #[validate(length(min = 10, max = 2000))]
     pub summary: String,
 }
 
 /// Validation schema for publish request
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PublishRequestSchema {
-    #[validate]
     pub payload: PayloadSchema,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PayloadSchema {
-    #[validate(length(min = 1))]
     pub assets: Vec<AssetInputSchema>,
 }
 
 /// Validation schema for fetch request
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FetchRequestSchema {
     #[serde(default = "default_min_gdi")]
-    #[validate(range(min = 0.0, max = 1.0))]
     pub min_gdi: f64,
     
     #[serde(default = "default_limit")]
-    #[validate(range(min = 1, max = 100))]
     pub limit: i32,
 }
 
@@ -46,36 +34,29 @@ fn default_min_gdi() -> f64 { 0.7 }
 fn default_limit() -> i32 { 20 }
 
 /// Validation schema for hello request
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HelloRequestSchema {
-    #[validate(regex(path = "crate::utils::NODE_ID_REGEX"))]
     pub protocol: String,
-    
     pub protocol_version: String,
 }
 
 /// Validation schema for heartbeat request
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HeartbeatRequestSchema {
-    #[validate(length(min = 1, max = 128))]
     pub node_id: String,
 }
 
 /// Validation schema for report request
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReportRequestSchema {
-    #[validate(length(min = 1, max = 128))]
     pub asset_id: String,
-    
     pub success: bool,
 }
 
 /// Validation schema for revoke request
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RevokeRequestSchema {
-    #[validate(length(min = 1, max = 128))]
     pub asset_id: String,
-    
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
 }

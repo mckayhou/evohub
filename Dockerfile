@@ -1,40 +1,44 @@
-# EvoHub v2.5.0 - Rust Dockerfile
-FROM rust:1.85-slim-bookworm AS builder
+# EvoHub v2.5.0 - Rust Implementation
+# Multi-stage build for minimal image size
 
-WORKDIR /app
+# Build stage
+FROM rust:1.75-alpine AS builder
 
 # Install dependencies
-RUN apt-get update && apt-get install -y \
-    pkg-config \
-    libssl-dev \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache musl-dev
+
+# Set working directory
+WORKDIR /app
 
 # Copy Cargo files
 COPY Cargo.toml Cargo.lock ./
 
 # Copy source code
 COPY src ./src
-COPY tests ./tests
 
 # Build release binary
-RUN cargo build --release
+RUN cargo build --release --target x86_64-unknown-linux-musl
 
-# Runtime image
-FROM debian:bookworm-slim
-
-WORKDIR /app
+# Runtime stage
+FROM alpine:latest
 
 # Install runtime dependencies
-RUN apt-get update && apt-get install -y \
-    ca-certificates \
-    libssl3 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy binary from builder
-COPY --from=builder /app/target/release/evohub /usr/local/bin/evohub
+RUN apk add --no-cache ca-certificates
 
 # Create non-root user
-RUN useradd -m -u 1001 evohub
+RUN addgroup -g 1001 -S evohub && \
+    adduser -u 1001 -S evohub -G evohub
+
+# Set working directory
+WORKDIR /app
+
+# Copy binary from builder
+COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/evohub /app/evohub
+
+# Change ownership
+RUN chown -R evohub:evohub /app
+
+# Switch to non-root user
 USER evohub
 
 # Expose port
@@ -42,7 +46,7 @@ EXPOSE 3000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:3000/health || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
 
-# Run
-CMD ["evohub"]
+# Run the binary
+CMD ["./evohub"]

@@ -56,11 +56,14 @@ dotenvy = "0.15"
 # Crypto
 sha2 = "0.10"
 hex = "0.4"
+hmac = "0.12"
+
+# Regex
+regex = "1.10"
 
 # Testing
 [dev-dependencies]
 tokio-test = "0.4"
-axum-test = "0.7"
 mockall = "0.12"
 
 [[bin]]

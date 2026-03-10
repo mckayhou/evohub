@@ -179,7 +179,7 @@ impl RateLimiter {
         let timestamps = self.requests.entry(key.to_string()).or_default();
         timestamps.retain(|&t| t > window_start);
         
-        self.max_requests - timestamps.len() as i32
+        (self.max_requests - timestamps.len() as i32).max(0)
     }
 }
 

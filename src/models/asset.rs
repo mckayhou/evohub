@@ -1,7 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use validator::Validate;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
@@ -11,16 +10,22 @@ pub enum AssetType {
     EvolutionEvent,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+impl std::fmt::Display for AssetType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AssetType::Gene => write!(f, "Gene"),
+            AssetType::Capsule => write!(f, "Capsule"),
+            AssetType::EvolutionEvent => write!(f, "EvolutionEvent"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Asset {
-    #[validate(length(min = 1, max = 128))]
     pub asset_id: String,
     pub r#type: AssetType,
-    #[validate(regex(path = "crate::utils::SEMVER_REGEX"))]
     pub version: String,
-    #[validate(length(min = 1))]
     pub signals_match: Vec<String>,
-    #[validate(length(min = 10, max = 2000))]
     pub summary: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub category: Option<String>,
@@ -151,22 +156,33 @@ impl Asset {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct AssetData {
     pub r#type: AssetType,
     pub version: String,
     pub signals_match: Vec<String>,
     pub summary: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub category: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub preconditions: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub constraints: Option<HashMap<String, serde_json::Value>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub code_diff: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub validate_commands: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub parent_gene: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub outcome: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub confidence: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub blast_radius: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub env_fingerprint: Option<HashMap<String, serde_json::Value>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub success_rate: Option<f64>,
 }
 
@@ -181,15 +197,12 @@ pub struct PublishPayload {
     pub assets: Vec<AssetInput>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AssetInput {
-    #[validate(length(min = 1, max = 128))]
     pub asset_id: String,
     pub r#type: AssetType,
     pub version: String,
-    #[validate(length(min = 1))]
     pub signals_match: Vec<String>,
-    #[validate(length(min = 10, max = 2000))]
     pub summary: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub preconditions: Option<Vec<String>>,

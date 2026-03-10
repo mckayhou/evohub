@@ -83,7 +83,7 @@ impl GDIService {
     async fn calculate_quality_score(&self, asset: &Asset) -> f64 {
         // In production, this would call LLM API with self-consistency N=3
         // For now, return a reasonable default based on asset completeness
-        let mut score = 0.7;
+        let mut score: f64 = 0.7;
 
         // Bonus for complete fields
         if asset.code_diff.is_some() && !asset.code_diff.as_ref().unwrap().is_empty() {
@@ -138,8 +138,9 @@ impl GDIService {
         checks += 1;
 
         // Check semver version
-        let semver_regex = regex::Regex::new(r"^\d+\.\d+\.\d+").unwrap();
-        if semver_regex.is_match(&asset.version) {
+        // Check semver format (simplified without regex)
+        let parts: Vec<&str> = asset.version.split('.').collect();
+        if parts.len() >= 3 && parts.iter().all(|p| p.parse::<u32>().is_ok()) {
             score += 1.0;
         }
         checks += 1;
@@ -159,7 +160,7 @@ impl GDIService {
 
     /// Safety rules (25%)
     fn check_safety_rules(&self, asset: &Asset) -> f64 {
-        let mut score = 1.0;
+        let mut score: f64 = 1.0;
 
         // Check code_diff for dangerous commands
         if let Some(code) = &asset.code_diff {
@@ -268,16 +269,16 @@ impl GDIService {
         let mut score = 0.0;
         let mut checks = 0;
 
-        // Check semantic versioning
-        let semver_regex = regex::Regex::new(r"^\d+\.\d+\.\d+(-[\w.]+)?$").unwrap();
-        if semver_regex.is_match(&asset.version) {
+        // Check semantic versioning (simplified)
+        let parts: Vec<&str> = asset.version.split('.').collect();
+        if parts.len() >= 3 && parts.iter().all(|p| p.parse::<u32>().is_ok()) {
             score += 1.0;
         }
         checks += 1;
 
-        // Check asset_id format
-        let id_regex = regex::Regex::new(r"^[a-z][a-z0-9_]*$").unwrap();
-        if id_regex.is_match(asset.asset_id.split('_').next().unwrap_or("")) {
+        // Check asset_id format (simplified)
+        let prefix = asset.asset_id.split('_').next().unwrap_or("");
+        if !prefix.is_empty() && prefix.chars().next().unwrap().is_ascii_lowercase() {
             score += 1.0;
         }
         checks += 1;
