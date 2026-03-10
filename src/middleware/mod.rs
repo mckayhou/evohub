@@ -24,8 +24,7 @@ pub async fn auth_middleware(
         .and_then(|h| h.to_str().ok());
 
     if let Some(auth) = auth_header {
-        if auth.starts_with("Bearer ") {
-            let token = &auth[7..];
+        if let Some(token) = auth.strip_prefix("Bearer ") {
             if !token.is_empty() {
                 return Ok(next.run(req).await);
             }

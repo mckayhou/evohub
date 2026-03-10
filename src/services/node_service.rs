@@ -1,5 +1,5 @@
 use crate::models::node::{
-    Node, NodeCredentials, HelloRequest, HelloResponse,
+    Node, HelloRequest, HelloResponse,
     HeartbeatRequest, HeartbeatResponse,
 };
 use crate::utils::crypto::{generate_node_id, generate_node_secret, generate_token, verify_token};

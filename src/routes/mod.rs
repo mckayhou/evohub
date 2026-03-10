@@ -4,7 +4,6 @@ use axum::{
     response::Json,
     Extension,
 };
-use serde_json::json;
 use std::sync::Arc;
 
 use crate::models::{
@@ -17,7 +16,6 @@ use crate::services::{NodeService, AssetService, SwarmService};
 
 pub mod handlers;
 
-use handlers::*;
 
 /// Shared application state
 #[derive(Clone)]

@@ -1,12 +1,9 @@
 use axum::{
-    extract::State,
     http::StatusCode,
     response::Json,
 };
-use serde_json::json;
 
 use crate::models::ApiResponse;
-use crate::routes::AppState;
 
 /// Error response handler
 pub fn error_response(message: impl Into<String>) -> (StatusCode, Json<ApiResponse<()>>) {

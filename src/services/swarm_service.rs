@@ -1,12 +1,11 @@
 use crate::models::bounty::{
-    Bounty, BountyStatus, Decision, TaskType, Priority,
+    Bounty, BountyStatus, TaskType, Priority,
     CreateBountyRequest, CreateBountyResponse,
     JoinBountyRequest, JoinBountyResponse,
     SubmitDecisionRequest, SubmitDecisionResponse,
     ListBountiesResponse, BountySummary,
     GetBountyResponse, BountyDetail, ParticipantSummary,
     CancelBountyRequest, CancelBountyResponse,
-    Requirements, Rewards,
 };
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -286,6 +285,7 @@ fn truncate(s: &str, max_len: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::bounty::Rewards;
 
     fn create_test_bounty_req() -> CreateBountyRequest {
         CreateBountyRequest {

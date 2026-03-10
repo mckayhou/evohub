@@ -5,7 +5,6 @@ use axum::{
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tracing::{info, Level};
-use tracing_subscriber;
 
 mod config;
 mod middleware;

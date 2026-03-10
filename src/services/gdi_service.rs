@@ -111,13 +111,13 @@ impl GDIService {
         let best_practices = self.check_best_practices_rules(asset);
 
         // Weights: Structure 25%, Safety 25%, Quality 20%, Completeness 15%, Best Practices 15%
-        let score = 0.25 * structure
+        
+
+        0.25 * structure
             + 0.25 * safety
             + 0.20 * quality
             + 0.15 * completeness
-            + 0.15 * best_practices;
-
-        score
+            + 0.15 * best_practices
     }
 
     /// Structure rules (25%)
